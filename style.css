@@ -44,6 +44,16 @@ code {
   border-radius: 6px;
 }
 
+.visually-hidden-file {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  opacity: 0;
+}
+
 .app-header,
 .app-footer {
   padding: 32px clamp(20px, 5vw, 64px);

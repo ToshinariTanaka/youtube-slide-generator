@@ -1,14 +1,22 @@
 // Up塾 YouTubeスライド生成アプリ
-// 役割: 台本の段落分割、スライド分解テキスト解析、編集可能なスライドHTML生成、PNG出力を担当します。
+// 役割: 台本の段落分割、スライド分解テキスト解析、編集可能なスライドHTML生成、JSON保存・読み込み、PNG出力を担当します。
 
 const scriptInput = document.getElementById('scriptInput');
 const slideBreakdownInput = document.getElementById('slideBreakdownInput');
 const imageInput = document.getElementById('imageInput');
 const generateButton = document.getElementById('generateButton');
 const generateFromBreakdownButton = document.getElementById('generateFromBreakdownButton');
+const saveJsonButton = document.getElementById('saveJsonButton');
+const loadJsonButton = document.getElementById('loadJsonButton');
+const loadJsonInput = document.getElementById('loadJsonInput');
 const downloadAllButton = document.getElementById('downloadAllButton');
 const slidesContainer = document.getElementById('slidesContainer');
 const slideCountText = document.getElementById('slideCountText');
+
+const APP_VERSION = '1.1.0';
+const PROJECT_FORMAT = 'upjuku-slide-project';
+const SUPPORTED_PROJECT_SCHEMA_VERSION = 1;
+const VALID_SLIDE_TYPES = ['title', 'explanation', 'imageExplanation'];
 
 let uploadedImageDataUrls = [];
 let currentSlideDataList = [];
@@ -62,6 +70,36 @@ generateFromBreakdownButton.addEventListener('click', () => {
 
   currentSlideDataList = createSlideDataListFromBreakdown(slideBreakdownItems, uploadedImageDataUrls);
   renderSlides(currentSlideDataList);
+});
+
+saveJsonButton.addEventListener('click', () => {
+  if (currentSlideDataList.length === 0) {
+    alert('保存できるスライドがありません。先にスライドを生成するか、JSONを読み込んでください。');
+    return;
+  }
+
+  downloadProjectJson();
+});
+
+loadJsonButton.addEventListener('click', () => {
+  loadJsonInput.click();
+});
+
+loadJsonInput.addEventListener('change', async (event) => {
+  const [file] = event.target.files;
+  if (!file) return;
+
+  try {
+    const projectText = await readFileAsText(file);
+    const importedSlides = parseProjectJson(projectText);
+    currentSlideDataList = importedSlides;
+    normalizeSlideTypes();
+    renderSlides(currentSlideDataList);
+  } catch (error) {
+    alert(`JSON読み込みに失敗しました。\n${error.message}`);
+  } finally {
+    event.target.value = '';
+  }
 });
 
 downloadAllButton.addEventListener('click', async () => {
@@ -240,13 +278,14 @@ function createSlideDataListFromBreakdown(slideBreakdownItems, imageDataUrls) {
   });
 }
 
-function createSlideData(type, title, body, imageDataUrl) {
+function createSlideData(type, title, body, imageDataUrl, createdAt = new Date().toISOString()) {
   return {
     id: createSlideId(),
     type,
     title,
     body,
     imageDataUrl,
+    createdAt,
   };
 }
 
@@ -278,7 +317,8 @@ function renderSlides(slideDataList) {
     slidesContainer.appendChild(slideCard);
   });
 
-  slideCountText.textContent = `${slideDataList.length}枚のスライドを生成しました。編集後の状態でPNG保存できます。`;
+  slideCountText.textContent = `${slideDataList.length}枚のスライドを生成しました。編集後の状態でJSON保存・PNG保存できます。`;
+  saveJsonButton.disabled = slideDataList.length === 0;
   downloadAllButton.disabled = slideDataList.length === 0;
 }
 
@@ -387,11 +427,112 @@ function duplicateSlide(index) {
     ...sourceSlide,
     id: createSlideId(),
     title: `${sourceSlide.title}（コピー）`,
+    createdAt: new Date().toISOString(),
   };
 
   currentSlideDataList.splice(index + 1, 0, duplicatedSlide);
   normalizeSlideTypes();
   renderSlides(currentSlideDataList);
+}
+
+function downloadProjectJson() {
+  const projectJson = buildProjectJson(currentSlideDataList);
+  const blob = new Blob([JSON.stringify(projectJson, null, 2)], { type: 'application/json' });
+  const objectUrl = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+
+  link.href = objectUrl;
+  link.download = createProjectFileName(new Date());
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(objectUrl), 0);
+}
+
+function buildProjectJson(slideDataList, createdAt = new Date().toISOString()) {
+  return {
+    format: PROJECT_FORMAT,
+    schemaVersion: SUPPORTED_PROJECT_SCHEMA_VERSION,
+    appVersion: APP_VERSION,
+    createdAt,
+    slideOrder: slideDataList.map((slideData) => slideData.id),
+    slides: slideDataList.map((slideData, index) => ({
+      order: index + 1,
+      id: slideData.id,
+      type: slideData.type,
+      title: slideData.title,
+      body: slideData.body,
+      imageDataUrl: slideData.imageDataUrl || null,
+      createdAt: slideData.createdAt || createdAt,
+    })),
+  };
+}
+
+function parseProjectJson(projectText) {
+  let projectData;
+
+  try {
+    projectData = JSON.parse(projectText);
+  } catch (error) {
+    throw new Error('JSONとして解析できません。ファイル内容が壊れていないか確認してください。');
+  }
+
+  validateProjectJson(projectData);
+  return projectData.slides.map((slideData, index) => normalizeImportedSlideData(slideData, index));
+}
+
+function validateProjectJson(projectData) {
+  if (!projectData || typeof projectData !== 'object' || Array.isArray(projectData)) {
+    throw new Error('このアプリ用のプロジェクトJSONではありません。');
+  }
+
+  if (projectData.format !== PROJECT_FORMAT) {
+    throw new Error('このアプリ用のプロジェクトJSONではありません。JSON保存ボタンで保存したファイルを選択してください。');
+  }
+
+  if (!Array.isArray(projectData.slides)) {
+    throw new Error('slides配列が見つかりません。保存済みプロジェクトJSONか確認してください。');
+  }
+
+  if (projectData.slides.length === 0) {
+    throw new Error('slides配列が空です。1枚以上のスライドを含むJSONを選択してください。');
+  }
+}
+
+function normalizeImportedSlideData(slideData, index) {
+  if (!slideData || typeof slideData !== 'object' || Array.isArray(slideData)) {
+    throw new Error(`slides[${index}] の形式が不正です。`);
+  }
+
+  const title = typeof slideData.title === 'string' ? slideData.title : '';
+  const body = typeof slideData.body === 'string' ? slideData.body : '';
+  const imageDataUrl = typeof slideData.imageDataUrl === 'string' && slideData.imageDataUrl ? slideData.imageDataUrl : null;
+  const fallbackType = index === 0 ? 'title' : imageDataUrl ? 'imageExplanation' : 'explanation';
+  const type = VALID_SLIDE_TYPES.includes(slideData.type) ? slideData.type : fallbackType;
+
+  return {
+    id: typeof slideData.id === 'string' && slideData.id.trim() ? slideData.id : createSlideId(),
+    type,
+    title: title || `スライド ${index + 1}`,
+    body: body || '本文を入力してください。',
+    imageDataUrl,
+    createdAt: typeof slideData.createdAt === 'string' && slideData.createdAt ? slideData.createdAt : new Date().toISOString(),
+  };
+}
+
+function createProjectFileName(date) {
+  return `upjuku-slide-project-${formatDateTimeForFileName(date)}.json`;
+}
+
+function formatDateTimeForFileName(date) {
+  const parts = [
+    date.getFullYear(),
+    date.getMonth() + 1,
+    date.getDate(),
+    date.getHours(),
+    date.getMinutes(),
+    date.getSeconds(),
+  ].map((part) => String(part).padStart(2, '0'));
+
+  return `${parts[0]}${parts[1]}${parts[2]}-${parts[3]}${parts[4]}${parts[5]}`;
 }
 
 function deleteSlide(index) {
@@ -475,6 +616,15 @@ function readFileAsDataUrl(file) {
   });
 }
 
+function readFileAsText(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.addEventListener('load', () => resolve(reader.result));
+    reader.addEventListener('error', () => reject(reader.error));
+    reader.readAsText(file, 'utf-8');
+  });
+}
+
 async function downloadSlideAsPng(slideElement, slideNumber) {
   if (!window.html2canvas) {
     alert('PNG出力ライブラリの読み込みに失敗しました。インターネット接続を確認してください。');
@@ -497,6 +647,7 @@ function showEmptyState(message) {
   currentSlideDataList = [];
   slidesContainer.innerHTML = `<div class="empty-state"><p>${message}</p></div>`;
   slideCountText.textContent = 'まだスライドは生成されていません。';
+  saveJsonButton.disabled = true;
   downloadAllButton.disabled = true;
 }
 

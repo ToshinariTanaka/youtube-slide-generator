@@ -48,7 +48,10 @@
       <div class="button-row">
         <button id="generateButton" class="primary-button" type="button">スライド生成</button>
         <button id="generateFromBreakdownButton" class="primary-button alternate-button" type="button">スライド分解テキストから生成</button>
+        <button id="saveJsonButton" class="secondary-button" type="button" disabled>JSON保存</button>
+        <button id="loadJsonButton" class="secondary-button" type="button">JSON読み込み</button>
         <button id="downloadAllButton" class="secondary-button" type="button" disabled>全スライドを連番PNG保存</button>
+        <input id="loadJsonInput" class="visually-hidden-file" type="file" accept="application/json,.json">
       </div>
 
       <section class="tips-box" aria-labelledby="tips-title">
@@ -57,6 +60,7 @@
           <li>従来どおり、説明文・台本は空行ごとに1枚のスライドを作ります。</li>
           <li>スライド分解テキストは <code>--- slide 1</code>、<code>タイトル：</code>、<code>本文：</code> を目印に読み取ります。</li>
           <li>生成後はタイトル・本文の編集、削除、複製、順番変更ができます。</li>
+          <li>JSON保存・JSON読み込みで、編集途中のプロジェクトをあとから再編集できます。</li>
           <li>編集後のプレビュー状態でPNG保存します。</li>
         </ul>
       </section>
