@@ -91,27 +91,38 @@ function renderSlides(slideDataList) {
     const slideCard = document.createElement('article');
     slideCard.className = 'slide-card';
 
-    const toolbar = document.createElement('div');
-    toolbar.className = 'slide-toolbar';
-    toolbar.innerHTML = `<span class="slide-number-label">Slide ${String(index + 1).padStart(2, '0')}</span>`;
-
-    const downloadButton = document.createElement('button');
-    downloadButton.className = 'download-button';
-    downloadButton.type = 'button';
-    downloadButton.textContent = 'このスライドをPNG保存';
-    downloadButton.addEventListener('click', () => {
-      const slideElement = slideCard.querySelector('.slide');
-      downloadSlideAsPng(slideElement, index + 1);
-    });
-    toolbar.appendChild(downloadButton);
-
-    slideCard.appendChild(toolbar);
+    slideCard.appendChild(createSlideToolbar(slideCard, index));
     slideCard.appendChild(createSlideElement(slideData, index));
     slidesContainer.appendChild(slideCard);
   });
 
   slideCountText.textContent = `${slideDataList.length}枚のスライドを生成しました。`;
   downloadAllButton.disabled = slideDataList.length === 0;
+}
+
+function createSlideToolbar(slideCard, index) {
+  const toolbar = document.createElement('div');
+  toolbar.className = 'slide-toolbar';
+
+  const slideNumberLabel = createTextElement(
+    'span',
+    'slide-number-label',
+    `Slide ${String(index + 1).padStart(2, '0')}`,
+  );
+
+  const downloadButton = document.createElement('button');
+  downloadButton.className = 'download-button';
+  downloadButton.type = 'button';
+  downloadButton.textContent = 'このスライドをPNG保存';
+  downloadButton.addEventListener('click', () => {
+    const slideElement = slideCard.querySelector('.slide');
+    downloadSlideAsPng(slideElement, index + 1);
+  });
+
+  toolbar.appendChild(slideNumberLabel);
+  toolbar.appendChild(downloadButton);
+
+  return toolbar;
 }
 
 function createSlideElement(slideData, index) {

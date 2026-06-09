@@ -32,9 +32,6 @@ Up塾のYouTube教材向けに、説明文とスキャン画像から統一デ�
 ├── style.css               # Up塾向けデザイン、CSS変数、スライドテンプレート
 ├── script.js               # 段落分割、スライドHTML生成、PNG出力処理
 ├── README.md               # このドキュメント
-├── assets/
-│   ├── images/             # 教材画像などを置く場所
-│   └── characters/         # キャラクター素材などを置く場所
 └── docs/
     ├── architecture.md     # 現在の設計メモ
     ├── codex_report.md     # Codex作業報告

@@ -1,34 +1,36 @@
 ## 今回やったこと
 
-- `index.html` をローカルで直接開いた場合でも、同じ階層のCSS/JavaScriptを確実に参照できるよう、`style.css` と `script.js` の読み込みパスを `./` 付きの相対パスに明示しました。
-- `index.html`、`style.css`、`script.js` が同じ階層にある前提で、参照先ファイルが存在することを静的検証しました。
-- READMEとプロジェクト状況ドキュメントに、ローカルファイルで開く場合の動作条件と注意点を追記しました。
+- `script.js` のスライド生成フローを確認し、「スライド生成」クリック時に `createSlideDataList` と `renderSlides` が1回ずつ呼ばれる構成であることを確認しました。
+- `createSlideDataList` 内を確認し、到達不能な旧 `return` が残っていない状態を維持しました。
+- `renderSlides` 内に直接書かれていたツールバー生成処理を `createSlideToolbar` に分離し、ツールバー生成経路を1つに整理しました。
+- `README.md` のファイル構成を現行リポジトリの実ファイルに合わせ、未作成の `assets/` 行を削除しました。
+- `docs/codex_report.md`、`docs/project_status.md`、`docs/next_tasks.md` を確認し、今回の重複確認・整理内容に合わせて更新しました。
 
 ## 変更ファイル
 
-- `index.html`
+- `script.js`
 - `README.md`
 - `docs/codex_report.md`
 - `docs/project_status.md`
+- `docs/next_tasks.md`
 
 ## テスト結果
 
 - `node --check script.js` でJavaScriptの構文エラーがないことを確認しました。
-- Pythonスクリプトで `index.html` のCSS/JS参照が `./style.css`、`./script.js` になっており、同階層に実ファイルが存在することを確認しました。
-- Pythonスクリプトで `file://` URL基準の相対パス解決結果が、リポジトリ直下の `style.css` と `script.js` を指すことを確認しました。
-- Playwright/Chromium/Firefoxなどのブラウザ実行環境は見つからなかったため、実ブラウザでのスクリーンショット確認は未実施です。
+- Pythonスクリプトで `script.js` の `renderSlides(slideDataList)` 呼び出しがイベントリスナー内の1回のみであること、`function renderSlides` と `function createSlideDataList` がそれぞれ1定義であること、`createSlideDataList` の旧処理由来の到達不能な二重 `return` がないことを確認しました。
+- Pythonスクリプトで `README.md` のファイル構成に同一行の重複がないことを確認しました。
 
 ## 注意点
 
-- CSSとアプリ本体のJavaScriptはローカル同階層ファイルとして読み込めます。
-- PNG保存機能は外部CDNの `html2canvas` に依存しています。オフライン状態で `index.html` を直接開いた場合、スライド生成は動いてもPNG保存だけ動かない可能性があります。
-- 今回は読み込みパスの明示とドキュメント更新のみで、UIデザインやスライド生成ロジックは変更していません。
+- 今回は重複整理とドキュメント更新が中心で、スライド分割、画像割り当て、PNG保存などの機能追加済み動作は維持しています。
+- UIの見た目を変更する意図はなく、ツールバーDOMの生成場所だけをヘルパー関数へ集約しています。そのためスクリーンショット確認は未実施です。
+- PNG保存機能は引き続き外部CDNの `html2canvas` に依存します。
 
 ## 次にやるべきこと
 
-- 完全オフライン対応が必要な場合は、`html2canvas` をローカルに同梱し、CDNではなくローカルパスで読み込む方式へ切り替える。
-- 実ブラウザ環境が利用できる場所で、`file://` から開いたときのCSS適用、スライド生成、PNG保存可否を手動確認する。
+- 実ブラウザでスライド生成、個別PNG保存、一括PNG保存を手動確認する。
+- 完全オフライン対応が必要な場合は、`html2canvas` のローカル同梱を検討する。
 
 ## チャッピーに相談すべき点
 
-- PNG保存まで含めて完全オフライン対応を必須にするか、CDN利用を許容するか確認したいです。
+- 現時点では必須の相談事項はありません。オフライン利用を必須にするかどうかは、運用方針として確認するとよいです。
