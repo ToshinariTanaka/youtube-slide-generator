@@ -49,12 +49,14 @@
 5. 「JSON読み込み」では、選択されたファイルを `FileReader` でテキストとして読み、JSON解析後にこのアプリ用の `format` と `slides` 配列を検証します。
 6. 検証に通ったスライドだけを正規化して `currentSlideDataList` に入れ、`renderSlides` で再描画します。
 7. 不正なJSON、このアプリ用でないJSON、`slides` 配列がないJSON、空の `slides` 配列は `alert` でエラー表示します。
+8. `type` は `title`、`explanation`、`imageExplanation`、`diagramExplanation` のみ有効として扱います。
 
 ## テンプレート
 
 - タイトルスライド: 動画冒頭のテーマ表示用。
 - 説明スライド: 本文中心の解説用。
 - 画像＋説明スライド: スキャン画像と解説文を並べる教材用。
+- 図解スライド: 図解用の保存済みタイプをJSON読み込み後も保持するためのタイプ。現在の画面上の新規生成では自動作成しません。
 
 ## 注意点
 
