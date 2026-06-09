@@ -1,40 +1,55 @@
 ## 今回やったこと
 
-- `script.js` に残っていた重複・旧式の型判定ロジックを整理しました。
-- `APP_VERSION` を `1.2.0` に統一しました。
-- スライド分解テキスト生成時の画像割り当てを `getImageDataUrlForBreakdownSlide` に集約し、`createSlideData` の `type` 引数を1つの判定式に統一しました。
-- インポート時とスライド順変更・削除後のタイプ正規化で、画像ありを `imageExplanation`、画像なしの1枚目を `title`、それ以外を `explanation` とする新しい判定順に統一しました。
-- `docs/architecture.md` の番号付きリストを確認し、重複番号がないことを確認しました。
+- `script.js` の実ファイル全体を対象に、指定された `rg` と関数表示で重複・旧コードの残存を確認しました。
+- `APP_VERSION` を `1.3.0` の1行に更新しました。
+- `VALID_SLIDE_TYPES` を `diagramExplanation` を含む1行に更新しました。
+- スライドDOM生成を `createVisualAreaElement` に集約し、同関数内で `content` や `slide` 変数を参照しない形に整理しました。
+- `createVisualAreaElement` の最後が `return visualArea` だけになるように整理しました。
+- 画像DOM生成を `createImageAreaElement` に分離しました。
+- JSON読み込みやスライド操作後の正規化で、画像なしの2枚目以降にある `diagramExplanation` を保持できるようにしました。
+- `diagramExplanation` 対応に合わせて README とドキュメントを更新しました。
 
 ## 変更ファイル
 
 - `script.js`
-  - アプリバージョンを `1.2.0` に更新しました。
-  - スライド分解テキスト生成時の画像取得処理をヘルパー関数に集約しました。
-  - 画像ありスライドを優先して `imageExplanation` にするタイプ判定へ統一しました。
+  - アプリバージョン、対応スライドタイプ、スライドDOM生成、タイプ正規化を更新しました。
+- `README.md`
+  - 扱えるテンプレートタイプに図解スライドを追記しました。
+- `docs/architecture.md`
+  - 有効な `type` と図解スライドの位置づけを追記しました。
+- `docs/project_status.md`
+  - 現在の対応状況と既知の注意点を更新しました。
+- `docs/next_tasks.md`
+  - 図解スライドの新規生成・編集UI検討を今後の作業候補に追加しました。
 - `docs/codex_report.md`
-  - 今回の重複コード修正内容と確認結果に更新しました。
+  - 今回の確認・修正・テスト結果に更新しました。
 
 ## テスト結果
 
+- `rg -n "const APP_VERSION" script.js`
+  - `APP_VERSION` が `1.3.0` の1行だけであることを確認しました。
+- `rg -n "const VALID_SLIDE_TYPES" script.js`
+  - `VALID_SLIDE_TYPES` が `diagramExplanation` を含む1行だけであることを確認しました。
+- `rg -n "content\.appendChild|slide\.appendChild|return slide|return visualArea" script.js`
+  - `return visualArea` の1行だけが残ることを確認しました。
+- `sed -n '/function createVisualAreaElement/,/function createImageAreaElement/p' script.js`
+  - `createVisualAreaElement` が `content` や `slide` を参照せず、最後が `return visualArea` だけであることを確認しました。
 - `node --check script.js`
   - 成功しました。JavaScriptの構文エラーがないことを確認しました。
 - `git diff --check`
   - 成功しました。差分に空白エラーがないことを確認しました。
-- `rg -n "const APP_VERSION|const imageForSlide|const fallbackType|type: slideData\\.imageDataUrl|type: index === 0|imageForSlide \\? 'imageExplanation'" script.js`
-  - 実行しました。修正対象の重複宣言・重複行が整理されていることを確認しました。
 
 ## 注意点
 
-- UIの見た目変更はありません。そのためスクリーンショット確認は実施していません。
-- `normalizeImportedSlideData` は、保存済みJSONに有効な `type` がある場合は既存どおりその値を尊重し、不正または未指定の場合のみ新しい `fallbackType` を使います。
-- スライド分解テキストで `slideNumber` がある場合、画像は `slideNumber - 2` の位置から取得します。番号がない場合は従来どおり1枚目をタイトル扱いし、2枚目以降へ画像を順番に割り当てます。
+- UIの見た目を直接変える変更ではないため、スクリーンショット確認は実施していません。
+- `diagramExplanation` は有効なJSONタイプとして保持できるようにしましたが、現時点の画面UIから新規に図解スライドを選択・作成する機能は未実装です。
+- 画像ありスライドは従来どおり `imageExplanation` が優先されます。
 
 ## 次にやるべきこと
 
-- 実ブラウザで、スライド分解テキスト生成時の画像割り当て、JSON保存・読み込み、削除・複製・順番変更後のスライドタイプを手動確認する。
-- 画像つき1枚目スライドを今後許容するか、タイトルスライドは常に画像なしに固定するかを仕様として明文化する。
+- 実ブラウザで、JSON読み込み後の `diagramExplanation` 保持、削除・複製・順番変更後のタイプ保持、PNG保存を手動確認する。
+- 図解スライドを新規作成・編集するUIを追加するか仕様判断する。
 
 ## チャッピーに相談すべき点
 
-- JSON読み込み時に保存済みの有効な `type` を優先する現在の仕様を続けるか、画像有無と位置から毎回タイプを完全再計算する仕様へ変更するか相談したいです。
+- `diagramExplanation` をJSON互換の保持だけにするか、画面上で選択できる正式テンプレートにするか相談したいです。

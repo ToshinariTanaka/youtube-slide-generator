@@ -13,10 +13,10 @@ const downloadAllButton = document.getElementById('downloadAllButton');
 const slidesContainer = document.getElementById('slidesContainer');
 const slideCountText = document.getElementById('slideCountText');
 
-const APP_VERSION = '1.2.0';
+const APP_VERSION = '1.3.0';
 const PROJECT_FORMAT = 'upjuku-slide-project';
 const SUPPORTED_PROJECT_SCHEMA_VERSION = 1;
-const VALID_SLIDE_TYPES = ['title', 'explanation', 'imageExplanation'];
+const VALID_SLIDE_TYPES = ['title', 'explanation', 'imageExplanation', 'diagramExplanation'];
 
 let uploadedImageDataUrls = [];
 let currentSlideDataList = [];
@@ -264,8 +264,8 @@ function createSlideDataList(paragraphs, imageDataUrls) {
   });
 }
 
-function createSlideDataListFromBreakdown(slideBreakdownItems, imageDataUrls) {
-  return slideBreakdownItems.map((slideItem, index) => {
+function createSlideDataListFromBreakdown(breakdownItems, imageDataUrls) {
+  return breakdownItems.map((slideItem, index) => {
     const imageForSlide = getImageDataUrlForBreakdownSlide(slideItem, index, imageDataUrls);
     const type = imageForSlide ? 'imageExplanation' : index === 0 ? 'title' : 'explanation';
 
@@ -553,37 +553,53 @@ function deleteSlide(index) {
 function normalizeSlideTypes() {
   currentSlideDataList = currentSlideDataList.map((slideData, index) => ({
     ...slideData,
-    type: slideData.imageDataUrl ? 'imageExplanation' : index === 0 ? 'title' : 'explanation',
+    type: getNormalizedSlideType(slideData, index),
   }));
 }
 
+function getNormalizedSlideType(slideData, index) {
+  if (slideData.imageDataUrl) return 'imageExplanation';
+  if (index === 0) return 'title';
+  if (slideData.type === 'diagramExplanation') return 'diagramExplanation';
+  return 'explanation';
+}
+
 function createSlideElement(slideData, index) {
-  const slide = document.createElement('section');
-  slide.className = `slide ${getSlideClassName(slideData.type)}`;
-  slide.dataset.slideNumber = String(index + 1);
+  return createVisualAreaElement(slideData, index);
+}
 
-  const content = document.createElement('div');
-  content.className = 'slide-content';
+function createVisualAreaElement(slideData, index) {
+  const visualArea = document.createElement('section');
+  visualArea.className = `slide ${getSlideClassName(slideData.type)}`;
+  visualArea.dataset.slideNumber = String(index + 1);
 
-  content.appendChild(createTextElement('div', 'slide-kicker', getSlideKicker(slideData.type, index)));
-  content.appendChild(createTextElement('h2', 'slide-title', slideData.title));
+  const innerArea = document.createElement('div');
+  innerArea.className = 'slide-content';
+
+  innerArea.appendChild(createTextElement('div', 'slide-kicker', getSlideKicker(slideData.type, index)));
+  innerArea.appendChild(createTextElement('h2', 'slide-title', slideData.title));
 
   if (slideData.imageDataUrl) {
-    const imageArea = document.createElement('div');
-    imageArea.className = 'image-area';
-
-    const image = document.createElement('img');
-    image.src = slideData.imageDataUrl;
-    image.alt = `${slideData.title}に関連するスキャン画像`;
-    imageArea.appendChild(image);
-    content.appendChild(imageArea);
+    innerArea.appendChild(createImageAreaElement(slideData));
   }
 
-  content.appendChild(createTextElement('p', 'slide-body', slideData.body));
-  slide.appendChild(content);
-  slide.appendChild(createTextElement('div', 'slide-footer-mark', 'Up塾'));
+  innerArea.appendChild(createTextElement('p', 'slide-body', slideData.body));
+  visualArea.appendChild(innerArea);
+  visualArea.appendChild(createTextElement('div', 'slide-footer-mark', 'Up塾'));
 
-  return slide;
+  return visualArea;
+}
+
+function createImageAreaElement(slideData) {
+  const imageArea = document.createElement('div');
+  imageArea.className = 'image-area';
+
+  const image = document.createElement('img');
+  image.src = slideData.imageDataUrl;
+  image.alt = `${slideData.title}に関連するスキャン画像`;
+  imageArea.appendChild(image);
+
+  return imageArea;
 }
 
 function getSlideClassName(type) {
@@ -591,6 +607,7 @@ function getSlideClassName(type) {
     title: 'title-slide',
     explanation: 'explanation-slide',
     imageExplanation: 'image-explanation-slide',
+    diagramExplanation: 'diagram-explanation-slide',
   };
 
   return classNames[type] || classNames.explanation;
@@ -599,6 +616,7 @@ function getSlideClassName(type) {
 function getSlideKicker(type, index) {
   if (type === 'title') return '今日のテーマ';
   if (type === 'imageExplanation') return `資料で確認 ${index}`;
+  if (type === 'diagramExplanation') return `図解 ${index}`;
   return `ポイント ${index}`;
 }
 
