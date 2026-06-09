@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Up塾 YouTubeスライド生成</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="app-header">
+    <div>
+      <p class="app-label">Up塾 YouTube教材用</p>
+      <h1>スライド生成アプリ</h1>
+      <p class="app-description">説明文とスキャン画像から、統一デザインの16:9スライドを作成します。</p>
+    </div>
+  </header>
+
+  <main class="app-layout">
+    <section class="control-panel" aria-labelledby="input-title">
+      <h2 id="input-title">1. 台本と画像を入力</h2>
+      <label class="field-group" for="scriptInput">
+        <span>説明文・台本</span>
+        <textarea id="scriptInput" rows="12" placeholder="1段落目がタイトルスライドになります。\n\n2段落目以降は説明スライドになります。\n\n空行で区切ると、複数枚のスライドに分割されます。"></textarea>
+      </label>
+
+      <label class="field-group" for="imageInput">
+        <span>スキャン画像</span>
+        <input id="imageInput" type="file" accept="image/*" multiple>
+        <small>複数枚アップロードすると、2枚目以降のスライドに順番に配置します。</small>
+      </label>
+
+      <div class="button-row">
+        <button id="generateButton" class="primary-button" type="button">スライド生成</button>
+        <button id="downloadAllButton" class="secondary-button" type="button" disabled>全スライドを連番PNG保存</button>
+      </div>
+
+      <section class="tips-box" aria-labelledby="tips-title">
+        <h3 id="tips-title">分割ルール</h3>
+        <ul>
+          <li>空行ごとに1枚のスライドを作ります。</li>
+          <li>1枚目は「タイトルスライド」です。</li>
+          <li>画像がある説明ページは「画像＋説明スライド」になります。</li>
+          <li>画像がないページは「説明スライド」になります。</li>
+        </ul>
+      </section>
+    </section>
+
+    <section class="preview-panel" aria-labelledby="preview-title">
+      <div class="preview-header">
+        <div>
+          <h2 id="preview-title">2. 生成結果プレビュー</h2>
+          <p id="slideCountText">まだスライドは生成されていません。</p>
+        </div>
+      </div>
+      <div id="slidesContainer" class="slides-container" aria-live="polite">
+        <div class="empty-state">
+          <p>台本を入力して「スライド生成」を押すと、ここにスライドが表示されます。</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="app-footer">
+    <p>字幕・音声・動画編集はVrewで行い、このアプリではスライドPNGの作成に集中します。</p>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
