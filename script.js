@@ -13,7 +13,7 @@ const downloadAllButton = document.getElementById('downloadAllButton');
 const slidesContainer = document.getElementById('slidesContainer');
 const slideCountText = document.getElementById('slideCountText');
 
-const APP_VERSION = '1.3.0';
+const APP_VERSION = '1.4.0';
 const PROJECT_FORMAT = 'upjuku-slide-project';
 const SUPPORTED_PROJECT_SCHEMA_VERSION = 1;
 const VALID_SLIDE_TYPES = ['title', 'explanation', 'imageExplanation', 'diagramExplanation'];
@@ -36,10 +36,12 @@ const sampleSlideBreakdown = `--- slide 1
 --- slide 2
 タイトル：まず見る場所
 本文：グラフが右上がりか右下がりかに注目します。
+図表：一次関数の右上がりグラフ
 
 --- slide 3
 タイトル：傾きの考え方
-本文：傾きは「右に1進んだとき、上にいくつ進むか」で考えます。`;
+本文：傾きは「右に1進んだとき、上にいくつ進むか」で考えます。
+図表：右上がりと右下がりの比較`;
 
 scriptInput.value = sampleScript;
 slideBreakdownInput.value = sampleSlideBreakdown;
@@ -154,13 +156,14 @@ function parseSlideBreakdownText(inputText) {
 
   return blocks
     .map(parseSlideBreakdownBlock)
-    .filter((slideItem) => slideItem.title || slideItem.body)
+    .filter((slideItem) => slideItem.title || slideItem.body || slideItem.diagramPrompt)
     .sort(compareSlideBreakdownItems);
 }
 
 function parseSlideBreakdownBlock(block) {
   const titleLines = [];
   const bodyLines = [];
+  const diagramLines = [];
   const looseLines = [];
   let currentField = null;
 
@@ -168,6 +171,7 @@ function parseSlideBreakdownBlock(block) {
     const trimmedLine = line.trim();
     const titleMatch = trimmedLine.match(/^(タイトル|title)\s*[:：]\s*(.*)$/i);
     const bodyMatch = trimmedLine.match(/^(本文|body|text)\s*[:：]\s*(.*)$/i);
+    const diagramMatch = trimmedLine.match(/^(図表|diagram)\s*[:：]\s*(.*)$/i);
 
     if (titleMatch) {
       currentField = 'title';
@@ -181,8 +185,15 @@ function parseSlideBreakdownBlock(block) {
       return;
     }
 
+    if (diagramMatch) {
+      currentField = 'diagram';
+      if (diagramMatch[2]) diagramLines.push(diagramMatch[2].trim());
+      return;
+    }
+
     if (!trimmedLine) {
       if (currentField === 'body') bodyLines.push('');
+      if (currentField === 'diagram') diagramLines.push('');
       return;
     }
 
@@ -190,6 +201,8 @@ function parseSlideBreakdownBlock(block) {
       titleLines.push(trimmedLine);
     } else if (currentField === 'body') {
       bodyLines.push(trimmedLine);
+    } else if (currentField === 'diagram') {
+      diagramLines.push(trimmedLine);
     } else {
       looseLines.push(trimmedLine);
     }
@@ -197,6 +210,7 @@ function parseSlideBreakdownBlock(block) {
 
   let title = trimMultilineText(titleLines.join('\n'));
   let body = trimMultilineText(bodyLines.join('\n'));
+  const diagramPrompt = trimMultilineText(diagramLines.join('\n'));
 
   if (!title && looseLines.length > 0) {
     title = looseLines.shift();
@@ -217,6 +231,7 @@ function parseSlideBreakdownBlock(block) {
     originalOrder: block.originalOrder,
     title: title || `スライド ${block.slideNumber || block.originalOrder + 1}`,
     body: body || '本文を入力してください。',
+    diagramPrompt,
   };
 }
 
@@ -267,13 +282,14 @@ function createSlideDataList(paragraphs, imageDataUrls) {
 function createSlideDataListFromBreakdown(breakdownItems, imageDataUrls) {
   return breakdownItems.map((slideItem, index) => {
     const imageForSlide = getImageDataUrlForBreakdownSlide(slideItem, index, imageDataUrls);
-    const type = imageForSlide ? 'imageExplanation' : index === 0 ? 'title' : 'explanation';
+    const type = getSlideTypeForContent(index, imageForSlide, slideItem.diagramPrompt);
 
     return createSlideData(
       type,
       slideItem.title,
       slideItem.body,
       imageForSlide,
+      slideItem.diagramPrompt,
     );
   });
 }
@@ -285,15 +301,22 @@ function getImageDataUrlForBreakdownSlide(slideItem, index, imageDataUrls) {
   return imageDataUrls[imageIndex] || null;
 }
 
-function createSlideData(type, title, body, imageDataUrl, createdAt = new Date().toISOString()) {
+function createSlideData(type, title, body, imageDataUrl, diagramPrompt = '', createdAt = new Date().toISOString()) {
   return {
     id: createSlideId(),
     type,
     title,
     body,
     imageDataUrl,
+    diagramPrompt,
     createdAt,
   };
+}
+
+function getSlideTypeForContent(index, imageDataUrl, diagramPrompt) {
+  if (imageDataUrl) return 'imageExplanation';
+  if (diagramPrompt) return 'diagramExplanation';
+  return index === 0 ? 'title' : 'explanation';
 }
 
 function createSlideId() {
@@ -382,6 +405,18 @@ function createSlideEditor(slideData, index) {
 
   editor.appendChild(titleLabel);
   editor.appendChild(bodyLabel);
+
+  if (slideData.diagramPrompt) {
+    const diagramLabel = document.createElement('label');
+    diagramLabel.className = 'editor-field';
+    diagramLabel.innerHTML = '<span>図表指示編集</span>';
+    const diagramInput = document.createElement('textarea');
+    diagramInput.rows = 2;
+    diagramInput.value = slideData.diagramPrompt;
+    diagramInput.addEventListener('input', (event) => updateSlideText(index, 'diagramPrompt', event.target.value));
+    diagramLabel.appendChild(diagramInput);
+    editor.appendChild(diagramLabel);
+  }
   return editor;
 }
 
@@ -405,8 +440,13 @@ function updateSlideText(index, fieldName, value) {
   if (!slideCard) return;
 
   const targetSelector = fieldName === 'title' ? '.slide-title' : '.slide-body';
-  const previewText = slideCard.querySelector(targetSelector);
+  const previewText = fieldName === 'diagramPrompt' ? null : slideCard.querySelector(targetSelector);
   if (previewText) previewText.textContent = value;
+
+  if (fieldName === 'diagramPrompt') {
+    const diagramArea = slideCard.querySelector('.diagram-area');
+    if (diagramArea) diagramArea.replaceWith(createDiagramAreaElement(slideData));
+  }
 
   if (fieldName === 'title') {
     const image = slideCard.querySelector('.image-area img');
@@ -468,6 +508,7 @@ function buildProjectJson(slideDataList, createdAt = new Date().toISOString()) {
       title: slideData.title,
       body: slideData.body,
       imageDataUrl: slideData.imageDataUrl || null,
+      diagramPrompt: slideData.diagramPrompt || '',
       createdAt: slideData.createdAt || createdAt,
     })),
   };
@@ -512,7 +553,8 @@ function normalizeImportedSlideData(slideData, index) {
   const title = typeof slideData.title === 'string' ? slideData.title : '';
   const body = typeof slideData.body === 'string' ? slideData.body : '';
   const imageDataUrl = typeof slideData.imageDataUrl === 'string' && slideData.imageDataUrl ? slideData.imageDataUrl : null;
-  const fallbackType = imageDataUrl ? 'imageExplanation' : index === 0 ? 'title' : 'explanation';
+  const diagramPrompt = typeof slideData.diagramPrompt === 'string' ? slideData.diagramPrompt.trim() : '';
+  const fallbackType = getSlideTypeForContent(index, imageDataUrl, diagramPrompt);
   const type = VALID_SLIDE_TYPES.includes(slideData.type) ? slideData.type : fallbackType;
 
   return {
@@ -521,6 +563,7 @@ function normalizeImportedSlideData(slideData, index) {
     title: title || `スライド ${index + 1}`,
     body: body || '本文を入力してください。',
     imageDataUrl,
+    diagramPrompt,
     createdAt: typeof slideData.createdAt === 'string' && slideData.createdAt ? slideData.createdAt : new Date().toISOString(),
   };
 }
@@ -559,6 +602,7 @@ function normalizeSlideTypes() {
 
 function getNormalizedSlideType(slideData, index) {
   if (slideData.imageDataUrl) return 'imageExplanation';
+  if (slideData.diagramPrompt) return 'diagramExplanation';
   if (index === 0) return 'title';
   if (slideData.type === 'diagramExplanation') return 'diagramExplanation';
   return 'explanation';
@@ -581,6 +625,8 @@ function createVisualAreaElement(slideData, index) {
 
   if (slideData.imageDataUrl) {
     innerArea.appendChild(createImageAreaElement(slideData));
+  } else if (slideData.diagramPrompt) {
+    innerArea.appendChild(createDiagramAreaElement(slideData));
   }
 
   innerArea.appendChild(createTextElement('p', 'slide-body', slideData.body));
@@ -588,6 +634,235 @@ function createVisualAreaElement(slideData, index) {
   visualArea.appendChild(createTextElement('div', 'slide-footer-mark', 'Up塾'));
 
   return visualArea;
+}
+
+
+function createDiagramAreaElement(slideData) {
+  const diagramArea = document.createElement('div');
+  diagramArea.className = 'diagram-area';
+  diagramArea.setAttribute('aria-label', `図表: ${slideData.diagramPrompt}`);
+  diagramArea.appendChild(createDiagramSvgElement(slideData.diagramPrompt));
+  return diagramArea;
+}
+
+function createDiagramSvgElement(diagramPrompt) {
+  const svg = createSvgElement('svg', {
+    viewBox: '0 0 420 250',
+    role: 'img',
+  });
+  const normalizedPrompt = diagramPrompt.replace(/\s+/g, ' ');
+
+  if (/一次関数|グラフ|右上がり|右下がり/.test(normalizedPrompt)) {
+    drawFunctionGraph(svg, normalizedPrompt);
+  } else if (/比較/.test(normalizedPrompt)) {
+    drawComparisonDiagram(svg);
+  } else if (/矢印/.test(normalizedPrompt)) {
+    drawArrowDiagram(svg);
+  } else {
+    drawPlaceholderDiagram(svg);
+  }
+
+  return svg;
+}
+
+function drawFunctionGraph(svg, prompt) {
+  appendSvgTitle(svg, prompt);
+  svg.appendChild(createSvgElement('rect', {
+    x: 16,
+    y: 14,
+    width: 388,
+    height: 220,
+    rx: 18,
+    fill: '#ffffff',
+  }));
+
+  [70, 120, 170, 220, 270, 320, 370].forEach((x) => {
+    svg.appendChild(createSvgElement('line', {
+      x1: x,
+      y1: 42,
+      x2: x,
+      y2: 210,
+      stroke: '#d9e8f7',
+      'stroke-width': 2,
+    }));
+  });
+
+  [70, 110, 150, 190].forEach((y) => {
+    svg.appendChild(createSvgElement('line', {
+      x1: 48,
+      y1: y,
+      x2: 380,
+      y2: y,
+      stroke: '#d9e8f7',
+      'stroke-width': 2,
+    }));
+  });
+
+  svg.appendChild(createSvgElement('line', {
+    x1: 48,
+    y1: 210,
+    x2: 380,
+    y2: 210,
+    stroke: '#0d47a1',
+    'stroke-width': 4,
+    'stroke-linecap': 'round',
+  }));
+  svg.appendChild(createSvgElement('line', {
+    x1: 70,
+    y1: 222,
+    x2: 70,
+    y2: 42,
+    stroke: '#0d47a1',
+    'stroke-width': 4,
+    'stroke-linecap': 'round',
+  }));
+
+  if (/右上がり/.test(prompt) || !/右下がり/.test(prompt)) {
+    drawTrendLine(svg, 92, 184, 354, 72, '#1e88e5', '右上がり');
+  }
+
+  if (/右下がり/.test(prompt)) {
+    drawTrendLine(svg, 92, 74, 354, 184, '#d84315', '右下がり');
+  }
+}
+
+function drawTrendLine(svg, x1, y1, x2, y2, color, label) {
+  svg.appendChild(createSvgElement('line', {
+    x1,
+    y1,
+    x2,
+    y2,
+    stroke: color,
+    'stroke-width': 8,
+    'stroke-linecap': 'round',
+  }));
+  svg.appendChild(createSvgElement('circle', { cx: x1, cy: y1, r: 8, fill: color }));
+  svg.appendChild(createSvgElement('circle', { cx: x2, cy: y2, r: 8, fill: color }));
+  svg.appendChild(createSvgText(label, x2 - 78, y2 - 14, color, 20));
+}
+
+function drawComparisonDiagram(svg) {
+  appendSvgTitle(svg, '比較');
+  svg.appendChild(createSvgElement('rect', {
+    x: 28,
+    y: 28,
+    width: 364,
+    height: 194,
+    rx: 24,
+    fill: '#ffffff',
+  }));
+
+  const bars = [
+    { label: 'A', height: 72, x: 106, color: '#1e88e5' },
+    { label: 'B', height: 126, x: 230, color: '#ffb300' },
+  ];
+
+  bars.forEach((bar) => {
+    svg.appendChild(createSvgElement('rect', {
+      x: bar.x,
+      y: 184 - bar.height,
+      width: 78,
+      height: bar.height,
+      rx: 12,
+      fill: bar.color,
+    }));
+    svg.appendChild(createSvgText(bar.label, bar.x + 28, 211, '#0d47a1', 24));
+  });
+
+  svg.appendChild(createSvgText('比較', 178, 68, '#0d47a1', 28));
+}
+
+function drawArrowDiagram(svg) {
+  appendSvgTitle(svg, '矢印');
+  svg.appendChild(createSvgElement('defs', {}, [
+    createSvgElement('marker', {
+      id: 'diagram-arrow-head',
+      markerWidth: 10,
+      markerHeight: 10,
+      refX: 8,
+      refY: 3,
+      orient: 'auto',
+      markerUnits: 'strokeWidth',
+    }, [
+      createSvgElement('path', {
+        d: 'M0,0 L0,6 L9,3 z',
+        fill: '#1e88e5',
+      }),
+    ]),
+  ]));
+
+  ['入力', '考える', '答え'].forEach((label, index) => {
+    const x = 32 + index * 138;
+    svg.appendChild(createSvgElement('rect', {
+      x,
+      y: 86,
+      width: 96,
+      height: 78,
+      rx: 18,
+      fill: '#ffffff',
+      stroke: '#ffb300',
+      'stroke-width': 5,
+    }));
+    svg.appendChild(createSvgText(label, x + 21, 134, '#0d47a1', 22));
+  });
+
+  [128, 266].forEach((x) => {
+    svg.appendChild(createSvgElement('line', {
+      x1: x,
+      y1: 125,
+      x2: x + 42,
+      y2: 125,
+      stroke: '#1e88e5',
+      'stroke-width': 8,
+      'stroke-linecap': 'round',
+      'marker-end': 'url(#diagram-arrow-head)',
+    }));
+  });
+}
+
+function drawPlaceholderDiagram(svg) {
+  appendSvgTitle(svg, '図表');
+  svg.appendChild(createSvgElement('rect', {
+    x: 30,
+    y: 36,
+    width: 360,
+    height: 178,
+    rx: 24,
+    fill: '#ffffff',
+    stroke: '#ffb300',
+    'stroke-width': 5,
+  }));
+  svg.appendChild(createSvgText('図表', 168, 124, '#0d47a1', 34));
+}
+
+function appendSvgTitle(svg, text) {
+  const title = createSvgElement('title');
+  title.textContent = text;
+  svg.appendChild(title);
+}
+
+function createSvgElement(tagName, attributes = {}, children = []) {
+  const element = document.createElementNS('http://www.w3.org/2000/svg', tagName);
+
+  Object.entries(attributes).forEach(([name, value]) => {
+    element.setAttribute(name, String(value));
+  });
+
+  children.forEach((child) => element.appendChild(child));
+  return element;
+}
+
+function createSvgText(text, x, y, fill, fontSize) {
+  const textElement = createSvgElement('text', {
+    x,
+    y,
+    fill,
+    'font-size': fontSize,
+    'font-weight': 900,
+    'font-family': 'sans-serif',
+  });
+  textElement.textContent = text;
+  return textElement;
 }
 
 function createImageAreaElement(slideData) {

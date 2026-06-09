@@ -1,55 +1,55 @@
 ## 今回やったこと
 
-- `script.js` の実ファイル全体を対象に、指定された `rg` と関数表示で重複・旧コードの残存を確認しました。
-- `APP_VERSION` を `1.3.0` の1行に更新しました。
-- `VALID_SLIDE_TYPES` を `diagramExplanation` を含む1行に更新しました。
-- スライドDOM生成を `createVisualAreaElement` に集約し、同関数内で `content` や `slide` 変数を参照しない形に整理しました。
-- `createVisualAreaElement` の最後が `return visualArea` だけになるように整理しました。
-- 画像DOM生成を `createImageAreaElement` に分離しました。
-- JSON読み込みやスライド操作後の正規化で、画像なしの2枚目以降にある `diagramExplanation` を保持できるようにしました。
-- `diagramExplanation` 対応に合わせて README とドキュメントを更新しました。
+- スライド分解テキストの `図表：` / `diagram:` 行を読み取り、スライドデータの `diagramPrompt` として保持する処理を追加しました。
+- `diagramPrompt` があるスライドを `diagramExplanation` として扱い、画像がなくても図表付きスライドになるようにしました。
+- `図表指示` のカード表示ではなく、右上がり・右下がり・比較・矢印に反応する簡易SVG図表をスライド上に描画する処理を追加しました。
+- 一次関数・グラフ系の指示では、右上がり線と右下がり線の簡易グラフをSVGで描くようにしました。
+- JSON保存・読み込みで `diagramPrompt` を保持するようにしました。
+- 図表付きスライドのレイアウトとSVG表示用CSSを追加しました。
+- README、設計メモ、プロジェクト状況、次タスクを更新しました。
 
 ## 変更ファイル
 
 - `script.js`
-  - アプリバージョン、対応スライドタイプ、スライドDOM生成、タイプ正規化を更新しました。
+  - `APP_VERSION` を `1.4.0` に更新しました。
+  - スライド分解テキストの `図表：` / `diagram:` パース、`diagramPrompt` 保存、図表スライド判定、JSON保存・読み込み、簡易SVG図表描画を追加しました。
+- `style.css`
+  - 図表付きスライド用の2カラムレイアウト、SVG表示エリア、レスポンシブ調整を追加しました。
 - `README.md`
-  - 扱えるテンプレートタイプに図解スライドを追記しました。
+  - `図表：` 入力、`diagramPrompt`、簡易SVG図表、JSON保存項目を追記しました。
 - `docs/architecture.md`
-  - 有効な `type` と図解スライドの位置づけを追記しました。
+  - 図表指示のデータフローと簡易SVG生成方針を追記しました。
 - `docs/project_status.md`
-  - 現在の対応状況と既知の注意点を更新しました。
+  - 図表付きスライドの対応状況と注意点を更新しました。
 - `docs/next_tasks.md`
-  - 図解スライドの新規生成・編集UI検討を今後の作業候補に追加しました。
+  - AI連携や図表生成強化の作業候補を更新しました。
 - `docs/codex_report.md`
-  - 今回の確認・修正・テスト結果に更新しました。
+  - 今回の作業内容に更新しました。
 
 ## テスト結果
 
-- `rg -n "const APP_VERSION" script.js`
-  - `APP_VERSION` が `1.3.0` の1行だけであることを確認しました。
-- `rg -n "const VALID_SLIDE_TYPES" script.js`
-  - `VALID_SLIDE_TYPES` が `diagramExplanation` を含む1行だけであることを確認しました。
-- `rg -n "content\.appendChild|slide\.appendChild|return slide|return visualArea" script.js`
-  - `return visualArea` の1行だけが残ることを確認しました。
-- `sed -n '/function createVisualAreaElement/,/function createImageAreaElement/p' script.js`
-  - `createVisualAreaElement` が `content` や `slide` を参照せず、最後が `return visualArea` だけであることを確認しました。
 - `node --check script.js`
   - 成功しました。JavaScriptの構文エラーがないことを確認しました。
 - `git diff --check`
   - 成功しました。差分に空白エラーがないことを確認しました。
+- `which chromium || which chromium-browser || which google-chrome || which google-chrome-stable`
+  - 環境にヘッドレスブラウザが見つからず、UIスクリーンショット取得は実施できませんでした。
 
 ## 注意点
 
-- UIの見た目を直接変える変更ではないため、スクリーンショット確認は実施していません。
-- `diagramExplanation` は有効なJSONタイプとして保持できるようにしましたが、現時点の画面UIから新規に図解スライドを選択・作成する機能は未実装です。
-- 画像ありスライドは従来どおり `imageExplanation` が優先されます。
+- 今回の図表生成は汎用AI連携ではなく、キーワードに応じた簡易SVGプレースホルダーです。
+- 現在反応する主な語は `右上がり`、`右下がり`、`比較`、`矢印` です。
+- 画像があるスライドでは従来どおり画像スライドを優先し、画像がない `diagramPrompt` 付きスライドを図表スライドとして表示します。
+- UI表示が変わる変更ですが、この実行環境ではChrome/Chromium系ブラウザが見つからなかったためスクリーンショット確認は未実施です。
 
 ## 次にやるべきこと
 
-- 実ブラウザで、JSON読み込み後の `diagramExplanation` 保持、削除・複製・順番変更後のタイプ保持、PNG保存を手動確認する。
-- 図解スライドを新規作成・編集するUIを追加するか仕様判断する。
+- 実ブラウザで、`図表：一次関数の右上がりグラフ`、`図表：右下がり`、`図表：比較`、`図表：矢印` の表示を手動確認する。
+- JSON保存後に読み込み直して、`diagramPrompt` と図表表示が維持されることを手動確認する。
+- 必要であれば、図表指示が空になった場合に通常スライドへ戻す編集UIを検討する。
+- AI連携による本格的なSVG生成を追加するか仕様相談する。
 
 ## チャッピーに相談すべき点
 
-- `diagramExplanation` をJSON互換の保持だけにするか、画面上で選択できる正式テンプレートにするか相談したいです。
+- 画像付きスライドに `diagramPrompt` がある場合、画像と図表のどちらを優先するべきか相談したいです。
+- `図表：` の対応キーワードを、数学教材向けにどこまで増やすべきか相談したいです。
