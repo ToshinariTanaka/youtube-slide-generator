@@ -19,8 +19,24 @@
     <section class="control-panel" aria-labelledby="input-title">
       <h2 id="input-title">1. 台本と画像を入力</h2>
       <label class="field-group" for="scriptInput">
-        <span>説明文・台本</span>
-        <textarea id="scriptInput" rows="12" placeholder="1段落目がタイトルスライドになります。\n\n2段落目以降は説明スライドになります。\n\n空行で区切ると、複数枚のスライドに分割されます。"></textarea>
+        <span>説明文・台本（空行ごとに分割）</span>
+        <textarea id="scriptInput" rows="10" placeholder="1段落目がタイトルスライドになります。
+
+2段落目以降は説明スライドになります。
+
+空行で区切ると、複数枚のスライドに分割されます。"></textarea>
+      </label>
+
+      <label class="field-group" for="slideBreakdownInput">
+        <span>スライド分解テキスト</span>
+        <textarea id="slideBreakdownInput" rows="14" placeholder="--- slide 1
+タイトル：一次関数のグラフを読み取ろう
+本文：今日は、一次関数のグラフから傾きと切片を見つける練習をします。
+
+--- slide 2
+タイトル：まず見る場所
+本文：グラフが右上がりか右下がりかに注目します。"></textarea>
+        <small>ChatGPTなどで分解した結果を貼り付け、1枚目、2枚目……を直接直してから生成できます。</small>
       </label>
 
       <label class="field-group" for="imageInput">
@@ -31,16 +47,17 @@
 
       <div class="button-row">
         <button id="generateButton" class="primary-button" type="button">スライド生成</button>
+        <button id="generateFromBreakdownButton" class="primary-button alternate-button" type="button">スライド分解テキストから生成</button>
         <button id="downloadAllButton" class="secondary-button" type="button" disabled>全スライドを連番PNG保存</button>
       </div>
 
       <section class="tips-box" aria-labelledby="tips-title">
         <h3 id="tips-title">分割ルール</h3>
         <ul>
-          <li>空行ごとに1枚のスライドを作ります。</li>
-          <li>1枚目は「タイトルスライド」です。</li>
-          <li>画像がある説明ページは「画像＋説明スライド」になります。</li>
-          <li>画像がないページは「説明スライド」になります。</li>
+          <li>従来どおり、説明文・台本は空行ごとに1枚のスライドを作ります。</li>
+          <li>スライド分解テキストは <code>--- slide 1</code>、<code>タイトル：</code>、<code>本文：</code> を目印に読み取ります。</li>
+          <li>生成後はタイトル・本文の編集、削除、複製、順番変更ができます。</li>
+          <li>編集後のプレビュー状態でPNG保存します。</li>
         </ul>
       </section>
     </section>

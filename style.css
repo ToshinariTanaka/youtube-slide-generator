@@ -37,6 +37,13 @@ input {
   font: inherit;
 }
 
+code {
+  padding: 0.1em 0.35em;
+  color: var(--color-primary-dark);
+  background: rgba(255, 255, 255, 0.78);
+  border-radius: 6px;
+}
+
 .app-header,
 .app-footer {
   padding: 32px clamp(20px, 5vw, 64px);
@@ -157,6 +164,11 @@ h3 {
   box-shadow: 0 12px 24px rgba(30, 136, 229, 0.3);
 }
 
+.alternate-button {
+  background: linear-gradient(135deg, #26a69a, #00796b);
+  box-shadow: 0 12px 24px rgba(0, 121, 107, 0.24);
+}
+
 .secondary-button {
   color: var(--color-primary-dark);
   background: var(--color-accent);
@@ -166,6 +178,30 @@ h3 {
   padding: 10px 16px;
   color: #fff;
   background: var(--color-primary);
+}
+
+.small-button {
+  cursor: pointer;
+  padding: 9px 13px;
+  color: var(--color-primary-dark);
+  font-size: 0.9rem;
+  font-weight: 900;
+  background: var(--color-surface-soft);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease;
+}
+
+.small-button.download-button {
+  color: #fff;
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.danger-button {
+  color: #fff;
+  background: #d84315;
+  border-color: #d84315;
 }
 
 button:hover:not(:disabled) {
@@ -227,6 +263,44 @@ button:disabled {
   justify-content: space-between;
   width: min(100%, var(--slide-width));
   gap: 12px;
+}
+
+.slide-action-group {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.slide-editor {
+  display: grid;
+  width: min(100%, var(--slide-width));
+  gap: 12px;
+  padding: 16px;
+  background: rgba(238, 247, 255, 0.82);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-medium);
+}
+
+.editor-field {
+  display: grid;
+  gap: 7px;
+  font-weight: 900;
+}
+
+.editor-field input,
+.editor-field textarea {
+  width: 100%;
+  padding: 11px 12px;
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 2px solid var(--color-border);
+  border-radius: 12px;
+}
+
+.editor-field textarea {
+  line-height: 1.6;
+  resize: vertical;
 }
 
 .slide-number-label {
@@ -387,6 +461,15 @@ button:disabled {
   .slide-body,
   .image-explanation-slide .slide-body {
     font-size: clamp(1rem, 4.5vw, 1.5rem);
+  }
+
+  .slide-toolbar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .slide-action-group {
+    justify-content: flex-start;
   }
 
   .image-explanation-slide .slide-content {
