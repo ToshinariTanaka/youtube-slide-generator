@@ -13,7 +13,7 @@ const downloadAllButton = document.getElementById('downloadAllButton');
 const slidesContainer = document.getElementById('slidesContainer');
 const slideCountText = document.getElementById('slideCountText');
 
-const APP_VERSION = '1.1.0';
+const APP_VERSION = '1.2.0';
 const PROJECT_FORMAT = 'upjuku-slide-project';
 const SUPPORTED_PROJECT_SCHEMA_VERSION = 1;
 const VALID_SLIDE_TYPES = ['title', 'explanation', 'imageExplanation'];
@@ -266,16 +266,23 @@ function createSlideDataList(paragraphs, imageDataUrls) {
 
 function createSlideDataListFromBreakdown(slideBreakdownItems, imageDataUrls) {
   return slideBreakdownItems.map((slideItem, index) => {
-    const isTitleSlide = index === 0 || slideItem.slideNumber === 1;
-    const imageForSlide = isTitleSlide ? null : imageDataUrls[index - 1] || null;
+    const imageForSlide = getImageDataUrlForBreakdownSlide(slideItem, index, imageDataUrls);
+    const type = imageForSlide ? 'imageExplanation' : index === 0 ? 'title' : 'explanation';
 
     return createSlideData(
-      isTitleSlide ? 'title' : imageForSlide ? 'imageExplanation' : 'explanation',
+      type,
       slideItem.title,
       slideItem.body,
       imageForSlide,
     );
   });
+}
+
+function getImageDataUrlForBreakdownSlide(slideItem, index, imageDataUrls) {
+  if (index === 0 || slideItem.slideNumber === 1) return null;
+
+  const imageIndex = Number.isFinite(slideItem.slideNumber) ? slideItem.slideNumber - 2 : index - 1;
+  return imageDataUrls[imageIndex] || null;
 }
 
 function createSlideData(type, title, body, imageDataUrl, createdAt = new Date().toISOString()) {
@@ -505,7 +512,7 @@ function normalizeImportedSlideData(slideData, index) {
   const title = typeof slideData.title === 'string' ? slideData.title : '';
   const body = typeof slideData.body === 'string' ? slideData.body : '';
   const imageDataUrl = typeof slideData.imageDataUrl === 'string' && slideData.imageDataUrl ? slideData.imageDataUrl : null;
-  const fallbackType = index === 0 ? 'title' : imageDataUrl ? 'imageExplanation' : 'explanation';
+  const fallbackType = imageDataUrl ? 'imageExplanation' : index === 0 ? 'title' : 'explanation';
   const type = VALID_SLIDE_TYPES.includes(slideData.type) ? slideData.type : fallbackType;
 
   return {
@@ -546,7 +553,7 @@ function deleteSlide(index) {
 function normalizeSlideTypes() {
   currentSlideDataList = currentSlideDataList.map((slideData, index) => ({
     ...slideData,
-    type: index === 0 ? 'title' : slideData.imageDataUrl ? 'imageExplanation' : 'explanation',
+    type: slideData.imageDataUrl ? 'imageExplanation' : index === 0 ? 'title' : 'explanation',
   }));
 }
 
