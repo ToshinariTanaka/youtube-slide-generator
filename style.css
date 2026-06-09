@@ -427,6 +427,39 @@ button:disabled {
   font-size: 27px;
 }
 
+.diagram-explanation-slide .slide-content {
+  grid-template-columns: 1fr 0.95fr;
+  grid-template-rows: auto 1fr;
+  align-items: stretch;
+}
+
+.diagram-explanation-slide .slide-kicker,
+.diagram-explanation-slide .slide-title {
+  grid-column: 1 / -1;
+}
+
+.diagram-area {
+  display: grid;
+  min-height: 0;
+  place-items: center;
+  padding: 16px;
+  background: linear-gradient(135deg, #ffffff 0%, #eef7ff 100%);
+  border: 4px solid var(--color-accent);
+  border-radius: 24px;
+}
+
+.diagram-area svg {
+  width: 100%;
+  height: 100%;
+  min-height: 210px;
+  filter: drop-shadow(0 12px 18px rgba(13, 71, 161, 0.12));
+}
+
+.diagram-explanation-slide .slide-body {
+  align-self: center;
+  font-size: 27px;
+}
+
 .slide-footer-mark {
   position: absolute;
   right: 42px;
@@ -482,7 +515,8 @@ button:disabled {
     justify-content: flex-start;
   }
 
-  .image-explanation-slide .slide-content {
+  .image-explanation-slide .slide-content,
+  .diagram-explanation-slide .slide-content {
     grid-template-columns: 1fr;
   }
 }
