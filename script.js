@@ -13,7 +13,7 @@ const downloadAllButton = document.getElementById('downloadAllButton');
 const slidesContainer = document.getElementById('slidesContainer');
 const slideCountText = document.getElementById('slideCountText');
 
-const APP_VERSION = '1.4.0';
+const APP_VERSION = '1.5.0';
 const PROJECT_FORMAT = 'upjuku-slide-project';
 const SUPPORTED_PROJECT_SCHEMA_VERSION = 1;
 const VALID_SLIDE_TYPES = ['title', 'explanation', 'imageExplanation', 'diagramExplanation'];
@@ -638,28 +638,50 @@ function createVisualAreaElement(slideData, index) {
 
 
 function createDiagramAreaElement(slideData) {
+  const diagramType = detectDiagramType(slideData.diagramPrompt);
   const diagramArea = document.createElement('div');
-  diagramArea.className = 'diagram-area';
+  diagramArea.className = `diagram-area diagram-type-${diagramType}`;
   diagramArea.setAttribute('aria-label', `図表: ${slideData.diagramPrompt}`);
-  diagramArea.appendChild(createDiagramSvgElement(slideData.diagramPrompt));
+  diagramArea.appendChild(createDiagramTypeBadge(diagramType));
+
+  if (diagramType === 'card') {
+    diagramArea.appendChild(createCardDiagramElement(slideData.diagramPrompt));
+  } else {
+    diagramArea.appendChild(createDiagramSvgElement(slideData.diagramPrompt, diagramType));
+  }
+
   return diagramArea;
 }
 
-function createDiagramSvgElement(diagramPrompt) {
+function detectDiagramType(diagramPrompt) {
+  const normalizedPrompt = diagramPrompt.replace(/\s+/g, ' ');
+
+  if (/比較|違い|共通点/.test(normalizedPrompt)) return 'comparison';
+  if (/流れ|手順|順番|矢印/.test(normalizedPrompt)) return 'flow';
+  if (/関係|つながり|原因|結果/.test(normalizedPrompt)) return 'relation';
+  if (/一次関数|グラフ|右上がり|右下がり/.test(normalizedPrompt)) return 'graph';
+  return 'card';
+}
+
+function createDiagramTypeBadge(diagramType) {
+  return createTextElement('span', 'diagram-type-badge', diagramType);
+}
+
+function createDiagramSvgElement(diagramPrompt, diagramType) {
   const svg = createSvgElement('svg', {
     viewBox: '0 0 420 250',
     role: 'img',
   });
   const normalizedPrompt = diagramPrompt.replace(/\s+/g, ' ');
 
-  if (/一次関数|グラフ|右上がり|右下がり/.test(normalizedPrompt)) {
-    drawFunctionGraph(svg, normalizedPrompt);
-  } else if (/比較/.test(normalizedPrompt)) {
+  if (diagramType === 'comparison') {
     drawComparisonDiagram(svg);
-  } else if (/矢印/.test(normalizedPrompt)) {
-    drawArrowDiagram(svg);
+  } else if (diagramType === 'flow') {
+    drawFlowDiagram(svg);
+  } else if (diagramType === 'relation') {
+    drawRelationDiagram(svg);
   } else {
-    drawPlaceholderDiagram(svg);
+    drawFunctionGraph(svg, normalizedPrompt);
   }
 
   return svg;
@@ -742,7 +764,7 @@ function drawTrendLine(svg, x1, y1, x2, y2, color, label) {
 }
 
 function drawComparisonDiagram(svg) {
-  appendSvgTitle(svg, '比較');
+  appendSvgTitle(svg, 'comparison');
   svg.appendChild(createSvgElement('rect', {
     x: 28,
     y: 28,
@@ -752,28 +774,31 @@ function drawComparisonDiagram(svg) {
     fill: '#ffffff',
   }));
 
-  const bars = [
-    { label: 'A', height: 72, x: 106, color: '#1e88e5' },
-    { label: 'B', height: 126, x: 230, color: '#ffb300' },
+  const columns = [
+    { label: 'A', x: 52, fill: '#e3f2fd' },
+    { label: '共通', x: 162, fill: '#fff3cf' },
+    { label: 'B', x: 272, fill: '#e0f2f1' },
   ];
 
-  bars.forEach((bar) => {
+  columns.forEach((column) => {
     svg.appendChild(createSvgElement('rect', {
-      x: bar.x,
-      y: 184 - bar.height,
-      width: 78,
-      height: bar.height,
-      rx: 12,
-      fill: bar.color,
+      x: column.x,
+      y: 82,
+      width: 96,
+      height: 98,
+      rx: 18,
+      fill: column.fill,
+      stroke: '#0d47a1',
+      'stroke-width': 4,
     }));
-    svg.appendChild(createSvgText(bar.label, bar.x + 28, 211, '#0d47a1', 24));
+    svg.appendChild(createSvgText(column.label, column.x + 22, 139, '#0d47a1', column.label === '共通' ? 20 : 26));
   });
 
-  svg.appendChild(createSvgText('比較', 178, 68, '#0d47a1', 28));
+  svg.appendChild(createSvgText('比較', 178, 58, '#0d47a1', 28));
 }
 
-function drawArrowDiagram(svg) {
-  appendSvgTitle(svg, '矢印');
+function drawFlowDiagram(svg) {
+  appendSvgTitle(svg, 'flow');
   svg.appendChild(createSvgElement('defs', {}, [
     createSvgElement('marker', {
       id: 'diagram-arrow-head',
@@ -791,7 +816,7 @@ function drawArrowDiagram(svg) {
     ]),
   ]));
 
-  ['入力', '考える', '答え'].forEach((label, index) => {
+  ['開始', '手順', '完了'].forEach((label, index) => {
     const x = 32 + index * 138;
     svg.appendChild(createSvgElement('rect', {
       x,
@@ -820,19 +845,63 @@ function drawArrowDiagram(svg) {
   });
 }
 
-function drawPlaceholderDiagram(svg) {
-  appendSvgTitle(svg, '図表');
-  svg.appendChild(createSvgElement('rect', {
-    x: 30,
-    y: 36,
-    width: 360,
-    height: 178,
-    rx: 24,
-    fill: '#ffffff',
-    stroke: '#ffb300',
-    'stroke-width': 5,
-  }));
-  svg.appendChild(createSvgText('図表', 168, 124, '#0d47a1', 34));
+function drawRelationDiagram(svg) {
+  appendSvgTitle(svg, 'relation');
+  svg.appendChild(createSvgElement('defs', {}, [
+    createSvgElement('marker', {
+      id: 'diagram-relation-arrow-head',
+      markerWidth: 10,
+      markerHeight: 10,
+      refX: 8,
+      refY: 3,
+      orient: 'auto',
+      markerUnits: 'strokeWidth',
+    }, [
+      createSvgElement('path', {
+        d: 'M0,0 L0,6 L9,3 z',
+        fill: '#26a69a',
+      }),
+    ]),
+  ]));
+
+  const nodes = [
+    { label: '原因', x: 58, y: 86, fill: '#e3f2fd' },
+    { label: '関係', x: 162, y: 42, fill: '#fff3cf' },
+    { label: '結果', x: 266, y: 126, fill: '#e0f2f1' },
+  ];
+
+  [[106, 110, 178, 82], [240, 92, 290, 140], [128, 140, 272, 166]].forEach(([x1, y1, x2, y2]) => {
+    svg.appendChild(createSvgElement('line', {
+      x1,
+      y1,
+      x2,
+      y2,
+      stroke: '#26a69a',
+      'stroke-width': 7,
+      'stroke-linecap': 'round',
+      'marker-end': 'url(#diagram-relation-arrow-head)',
+    }));
+  });
+
+  nodes.forEach((node) => {
+    svg.appendChild(createSvgElement('circle', {
+      cx: node.x + 48,
+      cy: node.y + 40,
+      r: 46,
+      fill: node.fill,
+      stroke: '#0d47a1',
+      'stroke-width': 5,
+    }));
+    svg.appendChild(createSvgText(node.label, node.x + 26, node.y + 49, '#0d47a1', 22));
+  });
+}
+
+function createCardDiagramElement(diagramPrompt) {
+  const card = document.createElement('div');
+  card.className = 'diagram-card';
+  card.appendChild(createTextElement('p', 'diagram-card-label', 'POINT'));
+  card.appendChild(createTextElement('p', 'diagram-card-text', diagramPrompt || '図表の内容を入力してください'));
+  return card;
 }
 
 function appendSvgTitle(svg, text) {
